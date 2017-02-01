@@ -134,7 +134,6 @@ def plot_histogram(csvfile,result,bins,normalize=True):
     
     # read the labels from the first row
     categories = reader.next()
-    file.close()
     
     # find data to plot
     result_str = str(result)
@@ -147,6 +146,8 @@ def plot_histogram(csvfile,result,bins,normalize=True):
     for row in reader:
         counts = row[result]
         edges = row[bins]
+    file.close()
+    
     # note: data is stored in string like "['2.34', '3.45']"
     counts = counts[1:-1]
     edges = edges[1:-1]
@@ -156,12 +157,22 @@ def plot_histogram(csvfile,result,bins,normalize=True):
     edges = numpy.array([float(e) for e in edges])
     
     if normalize:
-        counts = float(counts)/numpy.sum(counts)
+        counts = counts.astype('float32')/numpy.sum(counts)
     
-    plt.bar(edges[:-1],counts)
+    plt.bar(edges[:-1],counts,width=0.8*(edges[1]-edges[0]))
     plt.xlabel(result_str)
     plt.ylabel('counts')
     plt.title(result_str+' histogram')
+    
+    # save it
+    subfolder = os.path.join(os.getcwd(),'results')
+    if not os.path.isdir(subfolder):
+        os.mkdir(subfolder)
+    subfolder = os.path.join(subfolder,csvfile.split('.')[0])
+    if not os.path.isdir(subfolder):
+        os.mkdir(subfolder)
+    plt.savefig(os.path.join(subfolder,'hist-'+result_str))
+    plt.close()
 
 
 

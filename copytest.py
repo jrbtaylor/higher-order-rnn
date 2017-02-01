@@ -125,12 +125,13 @@ def experiment(model,activation,lr,lr_decay,batch_size,n_train,n_val,patience):
             batch_idx = train_idx[batch*batch_size:(batch+1)*batch_size]
             x_batch = x_train[batch_idx]
             y_batch = y_train[batch_idx]
-            loss_batch,grads_l2_batch,grads_l1_batch,weights_l1,weights_l2, \
+            loss_batch,grads_l2_batch,grads_l1_batch,w_l1,w_l2, \
                 preact_batch = train_fcn(x_batch,y_batch,lr)
             loss_epoch += loss_batch
             grad_l2_epoch += numpy.square(grads_l2_batch)
             grad_l1_epoch += grads_l1_batch
-            preact += numpy.histogram(preact_batch,bins=preact_bins)
+            hist,_ = numpy.histogram(preact_batch,bins=preact_bins)
+            preact += hist
             
         loss_epoch = loss_epoch/n_train_batches
         grad_l2_epoch = numpy.sqrt(grad_l2_epoch/n_train_batches)
@@ -140,14 +141,14 @@ def experiment(model,activation,lr,lr_decay,batch_size,n_train,n_val,patience):
              % (epoch,seqlen,1000*(end_time-start_time)/x_train.shape[0]))
         print('  Training loss  = %f' % loss_epoch)
         print('    Grads:    L1 = %f    L2 = %f' %(grad_l1_epoch,grad_l2_epoch))
-        print('    Weights:  L1 = %f    L2 = %f' %(weights_l1,weights_l2))
+        print('    Weights:  L1 = %f    L2 = %f' %(w_l1,w_l2))
         sys.stdout.flush() # force print to appear
         seqlens.append(seqlen)
         train_loss.append(loss_epoch)
         grad_l2.append(grad_l2_epoch)
         grad_l1.append(grad_l1_epoch)
-        weight_l2.append(weights_l1)
-        weight_l1.append(weights_l2)
+        weight_l2.append(float(w_l2))
+        weight_l1.append(float(w_l1))
         
         # validate
         val_loss_epoch = 0
@@ -181,7 +182,7 @@ def experiment(model,activation,lr,lr_decay,batch_size,n_train,n_val,patience):
         epoch += 1
         lr = lr*lr_decay
     
-    return seqlens, train_loss, val_loss, grad_l2_epoch, grad_l1_epoch, \
+    return seqlens, train_loss, val_loss, grad_l2, grad_l1, \
            weight_l2, weight_l1, preact, preact_bins
 
 
@@ -252,6 +253,7 @@ if __name__ == "__main__":
                                                     activation,order,lr,
                                                     lr_decay,n_train,n_val,
                                                     batch_size,patience)
+    preact = numpy.ndarray.tolist(preact)
     
     # log results
     filename = 'hornn_'+activation
