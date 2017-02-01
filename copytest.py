@@ -125,7 +125,7 @@ def experiment(model,activation,lr,lr_decay,batch_size,n_train,n_val,patience):
             batch_idx = train_idx[batch*batch_size:(batch+1)*batch_size]
             x_batch = x_train[batch_idx]
             y_batch = y_train[batch_idx]
-            loss_batch,grads_l2_batch,grads_l1_batch,w_l1,w_l2, \
+            loss_batch,grads_l2_batch,grads_l1_batch,w_l2,w_l1, \
                 preact_batch = train_fcn(x_batch,y_batch,lr)
             loss_epoch += loss_batch
             grad_l2_epoch += numpy.square(grads_l2_batch)
