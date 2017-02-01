@@ -125,8 +125,43 @@ def make_all(csvfile,hyperparam_toplot=0):
                    hyperparam_idx=hyperparam_toplot)
 
 
-
-
+def plot_histogram(csvfile,result,bins,normalize=True):
+    # open the file
+    if not csvfile[-4:]=='.csv':
+        csvfile = csvfile+'.csv'
+    file = open(csvfile,'r')
+    reader = csv.reader(file,delimiter=',')
+    
+    # read the labels from the first row
+    categories = reader.next()
+    file.close()
+    
+    # find data to plot
+    result_str = str(result)
+    if type(result) is str:
+        result = categories.index(result)
+    if type(bins) is str:
+        bins = categories.index(bins)
+    
+    # extract data from csv: last row only
+    for row in reader:
+        counts = row[result]
+        edges = row[bins]
+    # note: data is stored in string like "['2.34', '3.45']"
+    counts = counts[1:-1]
+    edges = edges[1:-1]
+    counts = counts.split(', ')
+    edges = edges.split(', ')
+    counts = numpy.array([int(c) for c in counts])
+    edges = numpy.array([float(e) for e in edges])
+    
+    if normalize:
+        counts = float(counts)/numpy.sum(counts)
+    
+    plt.bar(edges[:-1],counts)
+    plt.xlabel(result_str)
+    plt.ylabel('counts')
+    plt.title(result_str+' histogram')
 
 
 

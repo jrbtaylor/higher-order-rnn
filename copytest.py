@@ -63,14 +63,24 @@ def l2(x):
 def l1(x):
     return T.mean(T.abs_(x))
 
-def experiment(model,lr,lr_decay,batch_size,n_train,n_val,patience):
+def experiment(model,activation,lr,lr_decay,batch_size,n_train,n_val,patience):
     seqlens = []
     train_loss = []
     grad_l2 = []
     grad_l1 = []
     weight_l2 = []
     weight_l1 = []
-    preact = []
+    if activation.lower()=='tanh':
+        preact_limits = [-1,1]
+    elif activation.lower()=='sigmoid':
+        preact_limits = [0,1]
+    else:
+        preact_limits = [0,3]
+    num_bins = 41
+    preact_bins = [float(i)/num_bins for i in range(num_bins+1)]
+    preact_bins = [p*(preact_limits[1]-preact_limits[0]) \
+                   +preact_limits[0] for p in preact_bins]
+    preact = [0]*num_bins
     val_loss = []
     
     best_val = numpy.inf
@@ -120,7 +130,7 @@ def experiment(model,lr,lr_decay,batch_size,n_train,n_val,patience):
             loss_epoch += loss_batch
             grad_l2_epoch += numpy.square(grads_l2_batch)
             grad_l1_epoch += grads_l1_batch
-            preact.append([p for p in preact_batch])
+            preact += numpy.histogram(preact_batch,bins=preact_bins)
             
         loss_epoch = loss_epoch/n_train_batches
         grad_l2_epoch = numpy.sqrt(grad_l2_epoch/n_train_batches)
@@ -129,12 +139,8 @@ def experiment(model,lr,lr_decay,batch_size,n_train,n_val,patience):
         print('Epoch %d  -----  sequence: %i  -----  time per example (msec): %f' \
              % (epoch,seqlen,1000*(end_time-start_time)/x_train.shape[0]))
         print('  Training loss  = %f' % loss_epoch)
-        print(grad_l1_epoch)
-        print(grad_l2_epoch)
-        print(weights_l1)
-        print(weights_l2)
-#        print('    Grads:    L1 = %f    L2 = %f' %(grad_l1_epoch,grad_l2_epoch))
-#        print('    Weights:  L1 = %f    L2 = %f' %(weights_l1,weights_l2))
+        print('    Grads:    L1 = %f    L2 = %f' %(grad_l1_epoch,grad_l2_epoch))
+        print('    Weights:  L1 = %f    L2 = %f' %(weights_l1,weights_l2))
         sys.stdout.flush() # force print to appear
         seqlens.append(seqlen)
         train_loss.append(loss_epoch)
@@ -176,7 +182,7 @@ def experiment(model,lr,lr_decay,batch_size,n_train,n_val,patience):
         lr = lr*lr_decay
     
     return seqlens, train_loss, val_loss, grad_l2_epoch, grad_l1_epoch, \
-           weight_l2, weight_l1, preact
+           weight_l2, weight_l1, preact, preact_bins
 
 
 def log_results(filename,header,results):
@@ -211,7 +217,8 @@ def test_hornn(n_in,n_hidden,n_out,activation,order,
                   lr,lr_decay,n_train,n_val,batch_size,patience):
     x = T.tensor3('x')
     model = recurrent.hornn(x,n_in,n_hidden,n_out,activation,order)
-    return experiment(model,lr,lr_decay,batch_size,n_train,n_val,patience)
+    return experiment(model,activation,lr,lr_decay,
+                      batch_size,n_train,n_val,patience)
 
 
 if __name__ == "__main__":
@@ -236,17 +243,28 @@ if __name__ == "__main__":
     
     # experiment params
     lr_decay = 0.995
-    patience = 500
+    patience = 100
     batch_size = 256 # from paper
     n_hidden = 256 # from paper
     
     seqlens, loss, val_loss, grad_l2_epoch, grad_l1_epoch, weight_l2, \
-        weight_l1, preact = test_hornn(n_in,n_hidden,n_out,activation,order,lr,
-                                       lr_decay,n_train,n_val,batch_size,patience)
+        weight_l1, preact, preact_bins = test_hornn(n_in,n_hidden,n_out,
+                                                    activation,order,lr,
+                                                    lr_decay,n_train,n_val,
+                                                    batch_size,patience)
     
     # log results
-    filename = 'hornn_'+activation+'_order'+str(order)
-    graph.make_all(filename,'DNI_scale')
+    filename = 'hornn_'+activation
+    header = ['order','sequence length','training loss','validation loss',
+              'grad_l2','grad_l1','weight_l2','weight_l1',
+              'preactivation histogram','preactivation bins']
+    results = [order,seqlens,loss,val_loss,grad_l2_epoch,grad_l1_epoch,weight_l2,
+               weight_l1,preact,preact_bins]
+    log_results(filename,header,results)
+    graph.make_all(filename,'order')
+    graph.plot_histogram(filename,
+                         'preactivation histogram',
+                         'preactivation bins')
     
 
 
