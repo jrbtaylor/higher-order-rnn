@@ -236,6 +236,15 @@ if __name__ == "__main__":
     order = parser.parse_args().order
     lr = parser.parse_args().learnrate
     
+    def parse(x):
+        if type(x) is list:
+            x = x[0]
+        return x
+    
+    activation = parse(activation)
+    order = parse(order)
+    lr = parse(lr)
+    
     # make some data
     n_in = 4 # one-hot encoding, n_in-2 words + pause + copy
     n_out = n_in-1 # n_in-2 words + blank
@@ -256,7 +265,7 @@ if __name__ == "__main__":
     preact = numpy.ndarray.tolist(preact)
     
     # log results
-    filename = 'hornn_'+activation
+    filename = 'hornn_'+activation+'_order'+str(order)
     header = ['order','sequence length','training loss','validation loss',
               'grad_l2','grad_l1','weight_l2','weight_l1',
               'preactivation histogram','preactivation bins']
